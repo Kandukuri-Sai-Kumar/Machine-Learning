@@ -1,0 +1,141 @@
+----> To extract morphological features of rice images..I use 5 types of rices and i worked on three algorithms SVM,Random Forest,Decision Tree
+
+import cv2
+import numpy as np  import os
+import csv
+## Define function to calculate morphological features for a contour :  def calculate_features(cnt):
+# Area
+area = cv2.contourArea(cnt)
+# Perimeter
+perimeter = cv2.arcLength(cnt, True)
+# Fit ellipse to contour and get major and minor axis lengths and eccentricity  if len(cnt) >= 5:
+ellipse = cv2.fitEllipse(cnt)
+major_axis = max(ellipse[1])  minor_axis = min(ellipse[1])
+eccentricity = np.sqrt(1 - (minor_axis/major_axis)**2)
+else:
+major_axis = -1
+minor_axis = -1
+eccentricity = -1
+# Solidity
+hull = cv2.convexHull(cnt)
+hull_area = cv2.contourArea(hull)  if hull_area > 0:
+solidity = float(area)/hull_area
+else:
+solidity = -1
+# Convex area
+convex_area = cv2.contourArea(cv2.convexHull(cnt))  # Extent
+x,y,w,h = cv2.boundingRect(cnt)
+rect_area = w*h  if rect_area > 0:
+extent = float(area)/rect_area
+else:
+extent = -1
+# Aspect ratio
+if h > 0:
+aspect_ratio = float(w)/h  else:
+aspect_ratio = -1
+return area, perimeter, major_axis, minor_axis, eccentricity, solidity, convex_area, extent, aspect_ratio
+# Define directory containing images
+directory = "Rice_Image_Dataset\Arborio“  # Define CSV file to store results
+csvfile = "morphological_features.csv“  # Open CSV file for writing
+with open(csvfile, "w") as output:
+writer = csv.writer(output)
+writer.writerow(["Image", "Area", "Perimeter", "Major Axis", "Minor Axis", "Eccentricity", "Solidity", "Convex  Area", "Extent", "Aspect Ratio"])
+# Loop through images in directory  for filename in os.listdir(directory):
+# Read image and convert to grayscale
+image = cv2.imread(os.path.join(directory, filename))  gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# Threshold image to binary and find contours
+ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE,  cv2.CHAIN_APPROX_SIMPLE)
+# Loop through contours and calculate morphological features
+for i, cnt in enumerate(contours):
+area, perimeter, major_axis, minor_axis, eccentricity, solidity, convex_area, extent,  aspect_ratio = calculate_features(cnt)
+writer.writerow([filename, area, perimeter, major_axis, minor_axis, eccentricity, solidity,  convex_area, extent, aspect_ratio])
+
+---->  SVM  algorithm
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+df=pd.read_csv("morphological_features.csv")
+df
+rice_shuffled=df.sample(frac=1)
+rice_shuffled=rice_shuffled.reset_index(drop=True)
+rice_shuffled
+x=rice_shuffled.drop("class",axis=1)
+y=rice_shuffled["class"]
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
+from sklearn import svm
+classifier =svm.SVC(kernel='linear',gamma='auto',C=2)
+classifier.fit(x_train,y_train)
+y_predict=classifier.predict(x_test)
+accuracy=accuracy_score(y_test,y_predict)
+print(accuracy)
+
+----> Random Forest algorithm
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+np.random.seed(3)
+# Load the iris dataset
+rice = pd.read_csv('morphological_features.csv')
+rice_shuffled = rice.sample(frac=1)
+rice_shuffled = rice_shuffled.reset_index(drop = True)
+rice_shuffled
+
+x = rice_shuffled.drop("class",axis=1)
+y = rice_shuffled["class"]
+#Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2,random_state=42)
+
+# Create a random forest classifier with 100 trees
+model = RandomForestClassifier(n_estimators=100)
+
+# Fit the model to the training data
+model.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred = model.predict(X_test)
+
+# Calculate the accuracy of the model
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+---->Decision tree algorithm
+from sklearn.tree import DecisionTreeClassifier
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+import pandas as pd
+df=pd.read_csv("morphological_features.csv")
+df
+rice_shuffled = df.sample(frac=1)
+rice_shuffled = rice_shuffled.reset_index(drop = True)
+rice_shuffled
+x=rice_shuffled.drop("class",axis=1)
+print(x)
+y=rice_shuffled["class"]
+print(y)
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
+clf = DecisionTreeClassifier()
+clf.fit(x_train, y_train)
+y_pred = clf.predict(x_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(accuracy)
+print(classification_report(y_test,y_pred))
+cm  = confusion_matrix(y_test,y_pred)
+print(cm)
+plt.figure(figsize=(10,7))
+sns.heatmap(cm,annot=True)
+plt.xlabel('predicted')
+plt.ylabel('truth')
